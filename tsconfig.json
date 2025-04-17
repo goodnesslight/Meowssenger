@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./tests/client-e2e"
+    },
+    {
+      "path": "./apps/client"
+    },
+    {
+      "path": "./tests/server-e2e"
+    },
+    {
+      "path": "./apps/server"
+    },
+    {
+      "path": "./tests/desktop-e2e"
+    },
+    {
+      "path": "./apps/desktop"
+    }
+  ]
+}
