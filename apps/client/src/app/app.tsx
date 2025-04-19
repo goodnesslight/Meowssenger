@@ -1,50 +1,40 @@
-import NxWelcome from './nx-welcome';
+import { useState } from 'react';
+import ChatList from '../components/chat-list';
+import ChatWindow from '../components/chat-window';
+import chatsData, { Chat } from '../mocks/chat.mock';
 
-import { Route, Routes, Link } from 'react-router-dom';
 
-export function App() {
+export default function App() {
+  const [chats, setChats] = useState<Chat[]>(chatsData);
+  const [selectedChatId, setSelectedChatId] = useState<number>(chats[0].id);
+
+  const selectedChat = chats.find((chat) => chat.id === selectedChatId)!;
+
+  const handleSendMessage = (text: string) => {
+    const newMessage = {
+      id: Date.now(),
+      text,
+      sender: 'me',
+      time: new Date().toLocaleTimeString(),
+    };
+
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === selectedChatId
+          ? { ...chat, messages: [...chat.messages, newMessage] }
+          : chat
+      )
+    );
+  };
+
   return (
-    <div>
-      <NxWelcome title="@meowssenger/client" />
-
-      {/* START: routes */}
-      {/* These routes and navigation have been generated for you */}
-      {/* Feel free to move and update them to fit your needs */}
-      <br />
-      <hr />
-      <br />
-      <div role="navigation">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/page-2">Page 2</Link>
-          </li>
-        </ul>
+    <div className="flex h-screen bg-gray-100">
+      <div className="w-1/3 border-r border-gray-300">
+        <ChatList chats={chats} selectedId={selectedChatId} onSelect={setSelectedChatId} />
       </div>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <div>
-              This is the generated root route.{' '}
-              <Link to="/page-2">Click here for page 2.</Link>
-            </div>
-          }
-        />
-        <Route
-          path="/page-2"
-          element={
-            <div>
-              <Link to="/">Click here to go back to root page.</Link>
-            </div>
-          }
-        />
-      </Routes>
-      {/* END: routes */}
+      <div className="flex-1">
+        <ChatWindow chat={selectedChat} onSendMessage={handleSendMessage} />
+      </div>
     </div>
   );
 }
-
-export default App;
