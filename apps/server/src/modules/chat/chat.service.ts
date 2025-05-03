@@ -1,105 +1,115 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-
-interface User {
-  id: string;
-  socketId: string;
-  pendingInviteFrom: string | null;
-  inChatWith: string | null;
-}
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { UserService } from '../user/user.service';
+import { User } from '../user/user.types';
+import { UserStateService } from '../user/user-state/user-state.service';
+import { UserState } from '../user/user-state/user-state.enums';
+import { chatSockets, UserInviteDto } from '@shared';
 
 @Injectable()
 export class ChatService {
-  private users = new Map<string, User>();
+  private readonly invites = new Map<string, string>();
 
-  createUser(socketId: string): string {
-    const id: string = uuidv4().slice(0, 8);
-    this.users.set(id, {
-      id,
-      socketId,
-      pendingInviteFrom: null,
-      inChatWith: null,
-    });
-    return id;
-  }
+  private readonly chats = new Map<string, string>();
 
-  sendInvite(fromId: string, toId: string): boolean {
-    const partner: User | undefined = this.users.get(toId);
+  constructor(
+    private readonly userService: UserService,
+    private readonly userState: UserStateService
+  ) {}
 
-    if (!partner || partner.pendingInviteFrom || partner.inChatWith) {
-      throw new NotFoundException('Partner user was not found!');
+  public invite(dto: UserInviteDto): boolean {
+    if (!this.userState.isIdle(dto.fromUserId)) {
+      throw new ForbiddenException('You are busy');
     }
 
-    partner.pendingInviteFrom = fromId;
+    if (!this.userState.isIdle(dto.toUserId)) {
+      throw new ForbiddenException('Partner is not idle');
+    }
+
+    if (this.invites.has(dto.toUserId)) {
+      throw new ForbiddenException('Partner already has a pending invite');
+    }
+
+    const userTo: User = this.userService.get({ id: dto.toUserId });
+    userTo.socket.emit(chatSockets.invite.new, dto);
+
+    this.invites.set(dto.toUserId, dto.fromUserId);
+
+    this.userState.add(dto.fromUserId, UserState.Invite);
+    this.userState.add(dto.toUserId, UserState.Invite);
+
     return true;
   }
 
-  acceptInvite(myId: string): string | null {
-    const self: User | undefined = this.users.get(myId);
-    if (!self || !self.pendingInviteFrom) {
-      throw new NotFoundException('Self user was not found!');
+  public accept(userId: string): void {
+    if (!this.userState.has(userId, UserState.Invite)) {
+      throw new ForbiddenException('No pending invite to accept');
     }
 
-    const partner: User | undefined = this.users.get(self.pendingInviteFrom);
+    const me: User = this.userService.get({ id: userId });
+    const partner: User = this.userService.get({
+      id: this.invites.get(userId),
+    });
 
-    if (!partner) {
-      throw new NotFoundException('Partner user was not found!');
-    }
+    me.socket.emit(chatSockets.invite.accept, me.id);
+    partner.socket.emit(chatSockets.invite.accept, me.id);
 
-    self.inChatWith = partner.id;
-    partner.inChatWith = myId;
-    self.pendingInviteFrom = null;
+    this.chats.set(me.id, partner.id);
+    this.chats.set(partner.id, me.id);
 
-    return partner.socketId;
+    this.userState.delete(me.id, UserState.Invite);
+    this.userState.delete(partner.id, UserState.Invite);
+
+    this.userState.add(me.id, UserState.Chat);
+    this.userState.add(partner.id, UserState.Chat);
+
+    this.invites.delete(userId);
   }
 
-  rejectInvite(myId: string): void {
-    const self: User | undefined = this.users.get(myId);
-
-    if (!self) {
-      throw new NotFoundException('Self user was not found!');
+  public reject(userId: string): void {
+    if (!this.userState.has(userId, UserState.Invite)) {
+      return;
     }
 
-    self.pendingInviteFrom = null;
+    const fromUserId = this.invites.get(userId);
+
+    if (fromUserId) {
+      this.invites.delete(userId);
+      this.invites.delete(fromUserId);
+      this.userState.delete(userId, UserState.Invite);
+      this.userState.delete(fromUserId, UserState.Invite);
+    }
   }
 
-  leaveChat(userId: string): string | null {
-    const self: User | undefined = this.users.get(userId);
-
-    if (!self || !self.inChatWith) {
-      throw new NotFoundException('Self user was not found!');
+  public leave(userId: string): void {
+    if (!this.userState.has(userId, UserState.Chat)) {
+      throw new ForbiddenException('You are not in a chat');
     }
 
-    const partner: User | undefined = this.users.get(self.inChatWith);
+    const partnerId: string | undefined = this.chats.get(userId);
 
-    if (!partner) {
-      throw new NotFoundException('Partner user was not found!');
+    if (!partnerId) {
+      throw new NotFoundException('Chat partner not found');
     }
 
-    partner.inChatWith = null;
-    const socketToNotify = partner?.socketId || null;
-    self.inChatWith = null;
-    return socketToNotify;
+    const me: User = this.userService.get({ id: userId });
+    const partner: User = this.userService.get({ id: partnerId });
+
+    me.socket.emit(chatSockets.end);
+    partner.socket.emit(chatSockets.end);
+
+    this.chats.delete(userId);
+    this.chats.delete(partnerId);
+
+    this.userState.delete(userId, UserState.Chat);
+    this.userState.delete(partnerId, UserState.Chat);
   }
 
-  removeUserBySocket(socketId: string) {
-    const user: User | undefined = this.getUserBySocketId(socketId);
-
-    if (!user) {
-      throw new NotFoundException('User was not found!');
-    }
-
-    this.leaveChat(user.id);
-    this.users.delete(user.id);
-  }
-
-  getUserById(id: string): User | undefined {
-    return this.users.get(id);
-  }
-
-  getUserBySocketId(socketId: string): User | undefined {
-    return [...this.users.values()].find(
-      (user: User) => user.socketId === socketId
-    );
+  public sendMessage(userId: string, message: string): void {
+    const partner: User = this.userService.get({ id: this.chats.get(userId) });
+    partner.socket.emit(chatSockets.message.send, message);
   }
 }

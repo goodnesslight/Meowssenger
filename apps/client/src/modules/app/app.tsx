@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { socket } from '../socket/socket';
+import { socket } from '../../socket/socket';
 import { useTranslation } from 'react-i18next';
-import Chat from '../components/chat';
-import Invite from '../components/invite';
-import Notification from '../components/notification';
-import Language from '../components/language';
-import Theme from '../components/theme';
-import Particles from '../components/particles';
+import Chat from '../../components/chat';
+import Invite from '../../components/invite';
+import Notification from '../../components/notification';
+import Language from '../../components/language';
+import Theme from '../../components/theme';
+import Particles from '../../components/particles';
 
 const App = () => {
   const { t } = useTranslation();

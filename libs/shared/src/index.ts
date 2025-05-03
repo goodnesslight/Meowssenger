@@ -1,1 +1,2 @@
-export * from './lib/chat.js';
+export * from './modules/user';
+export * from './modules/chat';
