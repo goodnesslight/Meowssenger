@@ -13,7 +13,10 @@ const Language = () => {
     <select
       onChange={handleChange}
       value={i18n.language}
-      className="absolute top-4 right-4 border px-2 py-1 rounded"
+      className="absolute top-4 right-4 border px-2 py-1 rounded
+                bg-white text-black
+                dark:bg-gray-800 dark:text-white dark:border-gray-600
+                transition-colors"
     >
       <option value="en">EN</option>
       <option value="ru">RU</option>
