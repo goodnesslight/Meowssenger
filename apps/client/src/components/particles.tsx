@@ -42,7 +42,7 @@ const Particles = () => {
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
       const isDark = document.documentElement.classList.contains('dark');
-      const dotColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)';
+      const dotColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.6)';
       const lineColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
 
       // движение и отрисовка точек
