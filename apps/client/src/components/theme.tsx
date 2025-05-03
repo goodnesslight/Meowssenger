@@ -36,7 +36,7 @@ const Theme = () => {
 
   return (
     <button
-      onClick={() => setIsDark(prev => !prev)}
+      onClick={() => setIsDark((prev) => !prev)}
       aria-label="Toggle theme"
       className="absolute top-4 right-20 px-2 py-1 rounded border text-xl"
     >
