@@ -14,17 +14,19 @@ import { ChatService } from './chat.service';
   cors: { origin: '*' },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly duration: number = 15_000;
+
   @WebSocketServer() server: Server | undefined;
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly service: ChatService) {}
 
   handleConnection(client: Socket) {
-    const id = this.chatService.createUser(client.id);
+    const id: string = this.service.createUser(client.id);
     client.emit('yourId', id);
   }
 
   handleDisconnect(client: Socket) {
-    const socketToNotify = this.chatService.removeUserBySocket(client.id);
+    const socketToNotify = this.service.removeUserBySocket(client.id);
 
     if (socketToNotify) {
       this.server.to(socketToNotify).emit('chatEnded');
@@ -33,27 +35,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('invite')
   handleInvite(@MessageBody() toId: string, @ConnectedSocket() client: Socket) {
-    const user = this.chatService.getUserBySocket(client.id);
-    if (!user) return;
+    const user = this.service.getUserBySocketId(client.id);
+    if (!user) {
+      return;
+    }
 
-    const success = this.chatService.sendInvite(user.id, toId);
+    const success = this.service.sendInvite(user.id, toId);
     if (!success) {
       client.emit('inviteFailed', toId);
       return;
     }
 
-    const targetUser = this.chatService.getUserById(toId);
+    const targetUser = this.service.getUserById(toId);
     if (targetUser) {
-      this.server.to(targetUser.socketId).emit('incomingInvite', user.id);
+      this.server
+        .to(targetUser.socketId)
+        .emit('incomingInvite', user.id, this.duration);
     }
   }
 
   @SubscribeMessage('accept')
   handleAccept(@ConnectedSocket() client: Socket) {
-    const user = this.chatService.getUserBySocket(client.id);
-    if (!user) return;
+    const user = this.service.getUserBySocketId(client.id);
+    if (!user) {
+      return;
+    }
 
-    const otherSocket = this.chatService.acceptInvite(user.id);
+    const otherSocket = this.service.acceptInvite(user.id);
     if (otherSocket) {
       this.server.to(otherSocket).emit('inviteAccepted', user.id);
       client.emit('inviteAccepted', user.id);
@@ -62,18 +70,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('reject')
   handleReject(@ConnectedSocket() client: Socket) {
-    const user = this.chatService.getUserBySocket(client.id);
-    if (!user) return;
+    const user = this.service.getUserBySocketId(client.id);
+    if (!user) {
+      return;
+    }
 
-    this.chatService.rejectInvite(user.id);
+    this.service.rejectInvite(user.id);
   }
 
   @SubscribeMessage('leave')
   handleLeave(@ConnectedSocket() client: Socket) {
-    const user = this.chatService.getUserBySocket(client.id);
-    if (!user) return;
+    const user = this.service.getUserBySocketId(client.id);
+    if (!user) {
+      return;
+    }
 
-    const partnerSocket = this.chatService.leaveChat(user.id);
+    const partnerSocket = this.service.leaveChat(user.id);
     if (partnerSocket) {
       this.server.to(partnerSocket).emit('chatEnded');
     }
@@ -86,10 +98,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() message: string,
     @ConnectedSocket() client: Socket
   ) {
-    const user = this.chatService.getUserBySocket(client.id);
-    if (!user || !user.inChatWith) return;
+    const user = this.service.getUserBySocketId(client.id);
 
-    const partner = this.chatService.getUserById(user.inChatWith);
+    if (!user || !user.inChatWith) {
+      return;
+    }
+
+    const partner = this.service.getUserById(user.inChatWith);
+
     if (partner) {
       this.server.to(partner.socketId).emit('message', message);
     }

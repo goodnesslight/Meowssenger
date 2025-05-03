@@ -19,14 +19,14 @@ const App = () => {
       setMyId(id);
     });
 
-    socket.on('incomingInvite', (fromId: string) => {
+    socket.on('incomingInvite', (fromId: string, duration: number) => {
       setInviteFrom(fromId);
       setTimeout(() => {
         if (!inChatWith) {
           socket.emit('reject');
           setInviteFrom(null);
         }
-      }, 15000);
+      }, duration);
     });
 
     socket.on('inviteAccepted', (partnerId: string) => {
