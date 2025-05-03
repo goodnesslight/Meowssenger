@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import Chat from '../components/chat'
 import InviteInput from '../components/invite'
 import Notification from '../components/notification'
-import { socket } from './socket'
+import { socket } from '../socket/socket'
+import { useTranslation } from 'react-i18next';
+
 
 
 const App = () => {
+  const { t } = useTranslation();
+
   const [myId, setMyId] = useState('')
   const [inviteFrom, setInviteFrom] = useState<string | null>(null)
   const [inChatWith, setInChatWith] = useState<string | null>(null)
@@ -58,7 +62,7 @@ const App = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="absolute top-4 text-gray-700 text-xl font-mono">Ваш ID: {myId}</div>
+      <div className="absolute top-4 text-gray-700 text-xl font-mono">{t('self.id', { id: myId })}</div>
       {inviteFrom && !inChatWith && (
         <Notification inviterId={inviteFrom} onAccept={handleAccept} onReject={handleReject} />
       )}
