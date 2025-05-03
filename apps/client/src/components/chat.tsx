@@ -10,7 +10,7 @@ const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
   const [messages, setMessages] = useState<string[]>([])
   const [input, setInput] = useState('')
 
-  const sendMessage = () => {
+  const sendMessage = (): void => {
     if (!input.trim()) return
     socket.emit('message', input)
     setMessages((prev) => [...prev, `Вы: ${input}`])

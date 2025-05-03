@@ -1,28 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
+
+const getInitialTheme = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const stored: string | null = localStorage.getItem('theme');
+
+  if (stored === 'dark') {
+    return true;
+  }
+
+  if (stored === 'light') {
+    return false;
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+};
 
 const Theme = () => {
-  const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem('theme') === 'dark' ||
-           (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
+  const [isDark, setIsDark] = useState<boolean>(getInitialTheme);
 
-  useEffect(() => {
-    const root = document.documentElement;
+  useLayoutEffect(() => {
+    const root: HTMLElement = document.documentElement;
+    const classList: DOMTokenList = root.classList;
+
     if (isDark) {
-      root.classList.add('dark');
+      classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
-      root.classList.remove('dark');
+      classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
   }, [isDark]);
 
   return (
     <button
-      onClick={() => setIsDark(!isDark)}
-      className="absolute top-4 right-20 px-2 py-1 rounded border"
+      onClick={() => setIsDark(prev => !prev)}
+      aria-label="Toggle theme"
+      className="absolute top-4 right-20 px-2 py-1 rounded border text-xl"
     >
-      {isDark ? '☀️ Light' : '🌙 Dark'}
+      {isDark ? '☀' : '🌙'}
     </button>
   );
 };

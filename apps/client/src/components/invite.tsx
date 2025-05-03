@@ -5,16 +5,16 @@ const Invite: React.FC = () => {
   const [inputId, setInputId] = useState('')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     socket.emit('invite', inputId)
   }
 
-  socket.on('inviteFailed', (toId: string) => {
+  socket.on('inviteFailed', (toId: string): void => {
     setMessage(`Не удалось отправить приглашение пользователю ${toId}`)
   })
 
-  socket.on('incomingInvite', () => {
+  socket.on('incomingInvite', (): void => {
     setMessage('')
   })
 

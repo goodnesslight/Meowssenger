@@ -7,8 +7,6 @@ import Theme from '../components/theme';
 import { socket } from '../socket/socket'
 import { useTranslation } from 'react-i18next';
 
-
-
 const App = () => {
   const { t } = useTranslation();
 
