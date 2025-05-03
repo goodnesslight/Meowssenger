@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { socket } from '../socket/socket';
+import { useTranslation } from 'react-i18next';
 import Chat from '../components/chat';
 import Invite from '../components/invite';
 import Notification from '../components/notification';
 import Language from '../components/language';
 import Theme from '../components/theme';
-import { socket } from '../socket/socket';
-import { useTranslation } from 'react-i18next';
+import Particles from '../components/particles';
 
 const App = () => {
   const { t } = useTranslation();
@@ -62,6 +63,7 @@ const App = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 dark:text-white p-4 transition-colors">
+      <Particles />
       <Language />
       <Theme />
       <div className="absolute top-4 text-gray-700 text-xl font-mono">
