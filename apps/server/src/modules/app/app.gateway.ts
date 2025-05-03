@@ -16,7 +16,6 @@ import {
   userSockets,
 } from '@shared';
 import { ChatService } from '../chat/chat.service';
-import { User } from '../user/user.types';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -55,26 +54,25 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatInviteNewDto
   ): void {
-    const userFrom: User = this.userService.get({ socketId: socket.id });
-    this.chatService.invite({ ...dto, fromUserId: userFrom.id });
+    this.chatService.invite({
+      ...dto,
+      fromSocketId: socket.id,
+    });
   }
 
   @SubscribeMessage(chatSockets.invite.accept)
   handleInviteAccept(@ConnectedSocket() socket: Socket): void {
-    const userTo: User = this.userService.get({ socketId: socket.id });
-    this.chatService.accept(userTo.id);
+    this.chatService.accept(socket.id);
   }
 
   @SubscribeMessage(chatSockets.invite.reject)
   handleInviteReject(@ConnectedSocket() socket: Socket): void {
-    const userTo: User = this.userService.get({ socketId: socket.id });
-    this.chatService.reject(userTo.id);
+    this.chatService.reject(socket.id);
   }
 
   @SubscribeMessage(chatSockets.end)
   handleLeave(@ConnectedSocket() socket: Socket): void {
-    const userTo: User = this.userService.get({ socketId: socket.id });
-    this.chatService.leave(userTo.id);
+    this.chatService.leave(socket.id);
   }
 
   @SubscribeMessage(chatSockets.message.send)
@@ -82,7 +80,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatMessageSendDto
   ): void {
-    const userTo: User = this.userService.get({ socketId: socket.id });
-    this.chatService.sendMessage(userTo.id, dto.message);
+    this.chatService.sendMessage(socket.id, dto.message);
   }
 }

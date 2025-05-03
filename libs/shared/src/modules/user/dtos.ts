@@ -3,6 +3,5 @@ export interface UserIdSetDto {
 }
 
 export interface UserInviteDto {
-  fromUserId: string;
   toUserId: string;
 }

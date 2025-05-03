@@ -20,8 +20,10 @@ export class ChatService {
     private readonly userState: UserStateService
   ) {}
 
-  public invite(dto: UserInviteDto): boolean {
-    if (!this.userState.isIdle(dto.fromUserId)) {
+  public invite(dto: UserInviteDto & { fromSocketId: string }): boolean {
+    const userFrom: User = this.userService.get({ socketId: dto.fromSocketId });
+
+    if (!this.userState.isIdle(userFrom.id)) {
       throw new ForbiddenException('You are busy');
     }
 
@@ -36,22 +38,23 @@ export class ChatService {
     const userTo: User = this.userService.get({ id: dto.toUserId });
     userTo.socket.emit(chatSockets.invite.new, dto);
 
-    this.invites.set(dto.toUserId, dto.fromUserId);
+    this.invites.set(dto.toUserId, userFrom.id);
 
-    this.userState.add(dto.fromUserId, UserState.Invite);
+    this.userState.add(userFrom.id, UserState.Invite);
     this.userState.add(dto.toUserId, UserState.Invite);
 
     return true;
   }
 
-  public accept(userId: string): void {
-    if (!this.userState.has(userId, UserState.Invite)) {
+  public accept(socketId: string): void {
+    const me: User = this.userService.get({ socketId });
+
+    if (!this.userState.has(me.id, UserState.Invite)) {
       throw new ForbiddenException('No pending invite to accept');
     }
 
-    const me: User = this.userService.get({ id: userId });
     const partner: User = this.userService.get({
-      id: this.invites.get(userId),
+      id: this.invites.get(me.id),
     });
 
     me.socket.emit(chatSockets.invite.accept, me.id);
@@ -66,50 +69,55 @@ export class ChatService {
     this.userState.add(me.id, UserState.Chat);
     this.userState.add(partner.id, UserState.Chat);
 
-    this.invites.delete(userId);
+    this.invites.delete(socketId);
   }
 
-  public reject(userId: string): void {
-    if (!this.userState.has(userId, UserState.Invite)) {
+  public reject(socketId: string): void {
+    const user = this.userService.get({ socketId });
+
+    if (!this.userState.has(user.id, UserState.Invite)) {
       return;
     }
 
-    const fromUserId = this.invites.get(userId);
+    const fromUserId = this.invites.get(user.id);
 
     if (fromUserId) {
-      this.invites.delete(userId);
+      this.invites.delete(user.id);
       this.invites.delete(fromUserId);
-      this.userState.delete(userId, UserState.Invite);
+      this.userState.delete(user.id, UserState.Invite);
       this.userState.delete(fromUserId, UserState.Invite);
     }
   }
 
-  public leave(userId: string): void {
-    if (!this.userState.has(userId, UserState.Chat)) {
+  public leave(socketId: string): void {
+    const user = this.userService.get({ socketId });
+
+    if (!this.userState.has(user.id, UserState.Chat)) {
       throw new ForbiddenException('You are not in a chat');
     }
 
-    const partnerId: string | undefined = this.chats.get(userId);
+    const partnerId: string | undefined = this.chats.get(user.id);
 
     if (!partnerId) {
       throw new NotFoundException('Chat partner not found');
     }
 
-    const me: User = this.userService.get({ id: userId });
+    const me: User = this.userService.get({ id: user.id });
     const partner: User = this.userService.get({ id: partnerId });
 
     me.socket.emit(chatSockets.end);
     partner.socket.emit(chatSockets.end);
 
-    this.chats.delete(userId);
+    this.chats.delete(user.id);
     this.chats.delete(partnerId);
 
-    this.userState.delete(userId, UserState.Chat);
+    this.userState.delete(user.id, UserState.Chat);
     this.userState.delete(partnerId, UserState.Chat);
   }
 
-  public sendMessage(userId: string, message: string): void {
-    const partner: User = this.userService.get({ id: this.chats.get(userId) });
+  public sendMessage(socketId: string, message: string): void {
+    const user = this.userService.get({ socketId });
+    const partner: User = this.userService.get({ id: user.id });
     partner.socket.emit(chatSockets.message.send, message);
   }
 }
