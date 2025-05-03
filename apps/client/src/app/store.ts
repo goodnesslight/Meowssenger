@@ -5,7 +5,7 @@ type User = {
 
 const users: Map<string, User> = new Map();
 
-export const createUser = (): string => {
+export const createUser = (): User => {
   const id = crypto.randomUUID().slice(0, 8);
   users.set(id, {
     pendingInviteFrom: null,
