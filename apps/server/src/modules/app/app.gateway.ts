@@ -54,10 +54,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatInviteNewDto
   ): void {
-    this.chatService.invite({
-      ...dto,
-      fromSocketId: socket.id,
-    });
+    this.chatService.invite(socket.id, dto);
   }
 
   @SubscribeMessage(chatSockets.invite.accept)
@@ -82,6 +79,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatMessageSendDto
   ): void {
-    this.chatMessageService.send(socket.id, dto.message);
+    this.chatMessageService.send(socket.id, dto);
   }
 }

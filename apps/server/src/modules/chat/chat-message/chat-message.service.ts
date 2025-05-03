@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { chatMessageSockets } from '@shared';
+import { ChatMessageSendDto, chatMessageSockets } from '@shared';
 import { UserState } from '../../user/user-state/user-state.enums';
 import { UserStateService } from '../../user/user-state/user-state.service';
 import { UserService } from '../../user/user.service';
@@ -14,7 +14,7 @@ export class ChatMessageService {
     private readonly chatService: ChatService
   ) {}
 
-  public send(socketId: string, message: string): void {
+  public send(socketId: string, dto: ChatMessageSendDto): void {
     const from: User = this.userService.get({ socketId });
 
     if (!this.userState.has(from.id, UserState.Chat)) {
@@ -24,6 +24,6 @@ export class ChatMessageService {
     const to: User = this.userService.get({
       id: this.chatService.getPartnerUserId(from.id),
     });
-    to.socket.emit(chatMessageSockets.send, { message });
+    to.socket.emit(chatMessageSockets.send, dto);
   }
 }

@@ -17,18 +17,18 @@ export class ChatService {
 
   constructor(
     private readonly userService: UserService,
-    private readonly userState: UserStateService
+    private readonly userStateService: UserStateService
   ) {}
 
-  invite(dto: ChatInviteNewDto & { fromSocketId: string }): void {
-    const from: User = this.userService.get({ socketId: dto.fromSocketId });
+  invite(socketId: string, dto: ChatInviteNewDto): void {
+    const from: User = this.userService.get({ socketId });
     const to: User = this.userService.get({ id: dto.userId });
 
-    if (!this.userState.isIdle(from.id)) {
+    if (!this.userStateService.isIdle(from.id)) {
       throw new ForbiddenException('You are busy');
     }
 
-    if (!this.userState.isIdle(to.id)) {
+    if (!this.userStateService.isIdle(to.id)) {
       throw new ForbiddenException('Partner is not idle');
     }
 
@@ -39,16 +39,16 @@ export class ChatService {
     this.invites.set(from.id, to.id);
     this.invites.set(to.id, from.id);
 
-    this.userState.add(from.id, UserState.Invite);
-    this.userState.add(to.id, UserState.Invite);
+    this.userStateService.add(from.id, UserState.Invite);
+    this.userStateService.add(to.id, UserState.Invite);
 
-    to.socket.emit(chatSockets.invite.new, { fromUserId: from.id });
+    to.socket.emit(chatSockets.invite.new, { userId: from.id });
   }
 
   accept(socketId: string): void {
     const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(from.id, UserState.Invite)) {
+    if (!this.userStateService.has(from.id, UserState.Invite)) {
       throw new ForbiddenException('No pending invite to accept');
     }
 
@@ -66,19 +66,20 @@ export class ChatService {
     this.chats.set(from.id, toId);
     this.chats.set(toId, from.id);
 
-    this.userState.delete(from.id, UserState.Invite);
-    this.userState.delete(toId, UserState.Invite);
-    this.userState.add(from.id, UserState.Chat);
-    this.userState.add(toId, UserState.Chat);
+    this.userStateService.delete(from.id, UserState.Invite);
+    this.userStateService.delete(toId, UserState.Invite);
 
-    from.socket.emit(chatSockets.invite.accept, from.id);
-    to.socket.emit(chatSockets.invite.accept, from.id);
+    this.userStateService.add(from.id, UserState.Chat);
+    this.userStateService.add(toId, UserState.Chat);
+
+    from.socket.emit(chatSockets.invite.accept, { userId: from.id });
+    to.socket.emit(chatSockets.invite.accept, { userId: from.id });
   }
 
   reject(socketId: string): void {
     const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(from.id, UserState.Invite)) {
+    if (!this.userStateService.has(from.id, UserState.Invite)) {
       return;
     }
 
@@ -90,14 +91,15 @@ export class ChatService {
 
     this.invites.delete(from.id);
     this.invites.delete(toId);
-    this.userState.delete(from.id, UserState.Invite);
-    this.userState.delete(toId, UserState.Invite);
+
+    this.userStateService.delete(from.id, UserState.Invite);
+    this.userStateService.delete(toId, UserState.Invite);
   }
 
   leave(socketId: string): void {
     const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(from.id, UserState.Chat)) {
+    if (!this.userStateService.has(from.id, UserState.Chat)) {
       throw new ForbiddenException('You are not in a chat');
     }
 
@@ -111,8 +113,9 @@ export class ChatService {
 
     this.chats.delete(from.id);
     this.chats.delete(toId);
-    this.userState.delete(from.id, UserState.Chat);
-    this.userState.delete(toId, UserState.Chat);
+
+    this.userStateService.delete(from.id, UserState.Chat);
+    this.userStateService.delete(toId, UserState.Chat);
 
     from.socket.emit(chatSockets.end);
     to.socket.emit(chatSockets.end);
