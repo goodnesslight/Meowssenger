@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import socket from '../socket'
+import socket from '../app/socket'
 
 const InviteInput: React.FC = () => {
   const [inputId, setInputId] = useState('')

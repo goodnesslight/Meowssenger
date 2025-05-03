@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import socket from '../socket'
+import socket from '../app/socket'
 
 interface Props {
   partnerId: string
@@ -18,13 +18,11 @@ const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
   }
 
   useEffect(() => {
-    const receive = (msg: string) => {
-      setMessages((prev) => [...prev, `Он: ${msg}`])
+    return () => {
+      socket.disconnect()
     }
-
-    socket.on('message', receive)
-    return () => socket.off('message', receive)
   }, [])
+  
 
   return (
     <div className="w-full max-w-md bg-white p-4 rounded shadow-md">

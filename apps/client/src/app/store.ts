@@ -26,12 +26,14 @@ export const acceptInvite = (myId: string): string | null => {
   const me = users.get(myId);
   if (!me || !me.pendingInviteFrom) return null;
 
-  const sender = users.get(me.pendingInviteFrom);
+  const senderId = me.pendingInviteFrom;
+  const sender = users.get(senderId);
   if (!sender) return null;
 
-  me.inChatWith = senderId = me.pendingInviteFrom;
+  me.inChatWith = senderId;
   sender.inChatWith = myId;
   me.pendingInviteFrom = null;
+
   return senderId;
 };
 
