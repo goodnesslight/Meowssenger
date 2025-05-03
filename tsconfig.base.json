@@ -23,8 +23,8 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@shared/chat": [
-        "libs/shared/chat/src/"
+      "@shared": [
+        "libs/shared/src"
       ]
     }
   }

@@ -6,7 +6,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "../../libs/shared/chat/src"
+    "../../libs/shared/src"
   ],
   "exclude": [
     "out-tsc",
