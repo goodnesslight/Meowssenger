@@ -20,9 +20,6 @@
     },
     {
       "path": "./apps/desktop"
-    },
-    {
-      "path": "./libs/shared"
-    },
+    }
   ]
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Chat from '../components/chat'
 import InviteInput from '../components/invite'
 import Notification from '../components/notification'
-import socket from './socket'
+import { socket } from './socket'
 
 
 const App = () => {

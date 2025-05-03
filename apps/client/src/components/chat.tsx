@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import socket from '../app/socket'
+import {socket} from '../app/socket'
 
 interface Props {
   partnerId: string

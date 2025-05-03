@@ -1,19 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app/app.module';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { AppModule } from './modules/app/app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app: INestApplication = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-    origin: 'http://localhost:4200',
-    credentials: true,
+    origin: '*',
   });
-
-  console.log('asdasd');
   app.useWebSocketAdapter(new IoAdapter(app));
-  await app.listen(3000);
+  await app.listen(Number(process.env.SERVER_PORT));
 }
 
 bootstrap();
