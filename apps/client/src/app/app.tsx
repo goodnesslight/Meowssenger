@@ -1,40 +1,71 @@
-import { useState } from 'react';
-import ChatList from '../components/chat-list';
-import ChatWindow from '../components/chat-window';
-import chatsData, { Chat } from '../mocks/chat.mock';
+import { useEffect, useState } from 'react'
+import Chat from '../components/chat'
+import InviteInput from '../components/invite-input'
+import Notification from '../components/notification'
+import socket from '../socket'
 
 
-export default function App() {
-  const [chats, setChats] = useState<Chat[]>(chatsData);
-  const [selectedChatId, setSelectedChatId] = useState<number>(chats[0].id);
+const App = () => {
+  const [myId, setMyId] = useState('')
+  const [inviteFrom, setInviteFrom] = useState<string | null>(null)
+  const [inChatWith, setInChatWith] = useState<string | null>(null)
 
-  const selectedChat = chats.find((chat) => chat.id === selectedChatId)!;
+  useEffect(() => {
+    socket.on('yourId', (id: string) => {
+      setMyId(id)
+    })
 
-  const handleSendMessage = (text: string) => {
-    const newMessage = {
-      id: Date.now(),
-      text,
-      sender: 'me',
-      time: new Date().toLocaleTimeString(),
-    };
+    socket.on('incomingInvite', (fromId: string) => {
+      setInviteFrom(fromId)
+      setTimeout(() => {
+        if (!inChatWith) {
+          socket.emit('reject')
+          setInviteFrom(null)
+        }
+      }, 15000)
+    })
 
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === selectedChatId
-          ? { ...chat, messages: [...chat.messages, newMessage] }
-          : chat
-      )
-    );
-  };
+    socket.on('inviteAccepted', (partnerId: string) => {
+      setInChatWith(partnerId)
+      setInviteFrom(null)
+    })
+
+    socket.on('chatEnded', () => {
+      setInChatWith(null)
+      setInviteFrom(null)
+    })
+
+    return () => {
+      socket.off('yourId')
+      socket.off('incomingInvite')
+      socket.off('inviteAccepted')
+      socket.off('chatEnded')
+    }
+  }, [inChatWith])
+
+  const handleAccept = () => {
+    socket.emit('accept')
+  }
+
+  const handleReject = () => {
+    socket.emit('reject')
+    setInviteFrom(null)
+  }
+
+  const handleLeave = () => {
+    socket.emit('leave')
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="w-1/3 border-r border-gray-300">
-        <ChatList chats={chats} selectedId={selectedChatId} onSelect={setSelectedChatId} />
-      </div>
-      <div className="flex-1">
-        <ChatWindow chat={selectedChat} onSendMessage={handleSendMessage} />
-      </div>
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+      <div className="absolute top-4 text-gray-700 text-xl font-mono">Ваш ID: {myId}</div>
+      {inviteFrom && !inChatWith && (
+        <Notification inviterId={inviteFrom} onAccept={handleAccept} onReject={handleReject} />
+      )}
+      {!inviteFrom && !inChatWith && <InviteInput />}
+      {inChatWith && <Chat partnerId={inChatWith} onLeave={handleLeave} />}
     </div>
-  );
+  )
 }
+
+export default App
