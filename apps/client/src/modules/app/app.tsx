@@ -7,28 +7,28 @@ import Notification from '../../components/notification';
 import Language from '../../components/language';
 import Theme from '../../components/theme';
 import Particles from '../../components/particles';
-import {
-  ChatInviteNewDto,
-  chatSockets,
-  UserIdSetDto,
-  userSockets,
-} from '@shared';
+import { ChatInviteNewDto, chatSockets, userSockets } from '@shared';
 
 const App = () => {
   const { t } = useTranslation();
 
-  const [myId, setId] = useState('');
+  const [myId, setMyId] = useState<string>('');
   const [inviteFrom, setInviteFrom] = useState<string | null>(null);
   const [inChatWith, setInChatWith] = useState<string | null>(null);
 
   useEffect(() => {
-    socket.on(userSockets.id.set, (dto: UserIdSetDto) => {
-      setId(dto.id);
+    let timer: NodeJS.Timeout;
+
+    // Получаем свой ID
+    socket.on(userSockets.id.set, (dto: { id: string }) => {
+      setMyId(dto.id);
     });
 
+    // Новое приглашение: { userId: string }
     socket.on(chatSockets.invite.new, (dto: ChatInviteNewDto) => {
-      setInviteFrom(dto.toUserId);
-      setTimeout(() => {
+      setInviteFrom(dto.userId);
+      // авто-отклонение через 15 сек
+      timer = setTimeout(() => {
         if (!inChatWith) {
           socket.emit(chatSockets.invite.reject);
           setInviteFrom(null);
@@ -36,11 +36,13 @@ const App = () => {
       }, 15000);
     });
 
-    socket.on(chatSockets.invite.accept, (partnerId: string) => {
-      setInChatWith(partnerId);
+    // Принимаем приглашение: { userId: string }
+    socket.on(chatSockets.invite.accept, (dto: { userId: string }) => {
+      setInChatWith(dto.userId);
       setInviteFrom(null);
     });
 
+    // Конец чата
     socket.on(chatSockets.end, () => {
       setInChatWith(null);
       setInviteFrom(null);
@@ -51,18 +53,17 @@ const App = () => {
       socket.off(chatSockets.invite.new);
       socket.off(chatSockets.invite.accept);
       socket.off(chatSockets.end);
+      clearTimeout(timer);
     };
   }, [inChatWith]);
 
   const handleAccept = () => {
     socket.emit(chatSockets.invite.accept);
   };
-
   const handleReject = () => {
     socket.emit(chatSockets.invite.reject);
     setInviteFrom(null);
   };
-
   const handleLeave = () => {
     socket.emit(chatSockets.end);
   };
@@ -72,9 +73,10 @@ const App = () => {
       <Particles />
       <Language />
       <Theme />
-      <div className="absolute top-4 text-gray-700 text-xl font-mono">
+      <div className="absolute top-4 text-gray-700 text-xl font-mono dark:text-gray-200">
         {t('self.id', { id: myId })}
       </div>
+
       {inviteFrom && !inChatWith && (
         <Notification
           inviterId={inviteFrom}
@@ -82,7 +84,9 @@ const App = () => {
           onReject={handleReject}
         />
       )}
+
       {!inviteFrom && !inChatWith && <Invite />}
+
       {inChatWith && <Chat partnerId={inChatWith} onLeave={handleLeave} />}
     </div>
   );

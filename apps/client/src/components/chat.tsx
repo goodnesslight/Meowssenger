@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/socket';
-import { chatSockets } from '@shared';
+import { chatMessageSockets } from '@shared';
 
 interface Props {
   partnerId: string;
@@ -9,20 +9,25 @@ interface Props {
 
 const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
   const [messages, setMessages] = useState<string[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState<string>('');
 
   const sendMessage = (): void => {
     if (!input.trim()) return;
-    socket.emit(chatSockets.message.send, input);
+    socket.emit(chatMessageSockets.send, { message: input });
     setMessages((prev) => [...prev, `Вы: ${input}`]);
     setInput('');
   };
 
   useEffect(() => {
-    return () => {
-      socket.disconnect();
+    const handleIncoming = (dto: { message: string }) => {
+      setMessages((prev) => [...prev, `${partnerId}: ${dto.message}`]);
     };
-  }, []);
+
+    socket.on(chatMessageSockets.send, handleIncoming);
+    return () => {
+      socket.off(chatMessageSockets.send, handleIncoming);
+    };
+  }, [partnerId]);
 
   return (
     <div className="w-full max-w-md bg-white dark:bg-gray-800 text-black dark:text-white p-4 rounded shadow-md transition-colors">
