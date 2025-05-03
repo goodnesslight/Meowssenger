@@ -1,13 +1,12 @@
 import {
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Socket } from 'socket.io';
 import { UserService } from '../user/user.service';
 import {
   type ChatInviteNewDto,
@@ -22,8 +21,6 @@ import { ChatService } from '../chat/chat.service';
 })
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly clients: Map<string, Socket> = new Map<string, Socket>();
-
-  @WebSocketServer() server!: Server;
 
   constructor(
     private readonly userService: UserService,

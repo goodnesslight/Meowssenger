@@ -4,120 +4,134 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserService } from '../user/user.service';
-import { User } from '../user/user.types';
 import { UserStateService } from '../user/user-state/user-state.service';
 import { UserState } from '../user/user-state/user-state.enums';
 import { chatSockets, UserInviteDto } from '@shared';
+import { User } from '../user/user.types';
 
 @Injectable()
 export class ChatService {
-  private readonly invites = new Map<string, string>();
-
   private readonly chats = new Map<string, string>();
+
+  private readonly invites = new Map<string, string>();
 
   constructor(
     private readonly userService: UserService,
     private readonly userState: UserStateService
   ) {}
 
-  public invite(dto: UserInviteDto & { fromSocketId: string }): boolean {
-    const userFrom: User = this.userService.get({ socketId: dto.fromSocketId });
+  public invite(dto: UserInviteDto & { fromSocketId: string }): void {
+    const from: User = this.userService.get({ socketId: dto.fromSocketId });
+    const to: User = this.userService.get({ id: dto.toUserId });
 
-    if (!this.userState.isIdle(userFrom.id)) {
+    if (!this.userState.isIdle(from.id)) {
       throw new ForbiddenException('You are busy');
     }
 
-    if (!this.userState.isIdle(dto.toUserId)) {
+    if (!this.userState.isIdle(to.id)) {
       throw new ForbiddenException('Partner is not idle');
     }
 
-    if (this.invites.has(dto.toUserId)) {
-      throw new ForbiddenException('Partner already has a pending invite');
+    if (this.invites.has(from.id) || this.invites.has(to.id)) {
+      throw new ForbiddenException('Already invited');
     }
 
-    const userTo: User = this.userService.get({ id: dto.toUserId });
-    userTo.socket.emit(chatSockets.invite.new, dto);
+    this.invites.set(from.id, to.id);
+    this.invites.set(to.id, from.id);
 
-    this.invites.set(dto.toUserId, userFrom.id);
+    this.userState.add(from.id, UserState.Invite);
+    this.userState.add(to.id, UserState.Invite);
 
-    this.userState.add(userFrom.id, UserState.Invite);
-    this.userState.add(dto.toUserId, UserState.Invite);
-
-    return true;
+    to.socket.emit(chatSockets.invite.new, { fromUserId: from.id });
   }
 
   public accept(socketId: string): void {
-    const me: User = this.userService.get({ socketId });
+    const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(me.id, UserState.Invite)) {
+    if (!this.userState.has(from.id, UserState.Invite)) {
       throw new ForbiddenException('No pending invite to accept');
     }
 
-    const partner: User = this.userService.get({
-      id: this.invites.get(me.id),
-    });
+    const toId: string | undefined = this.invites.get(from.id);
 
-    me.socket.emit(chatSockets.invite.accept, me.id);
-    partner.socket.emit(chatSockets.invite.accept, me.id);
+    if (!toId) {
+      throw new NotFoundException('Invite mapping broken');
+    }
 
-    this.chats.set(me.id, partner.id);
-    this.chats.set(partner.id, me.id);
+    const to: User = this.userService.get({ id: toId });
 
-    this.userState.delete(me.id, UserState.Invite);
-    this.userState.delete(partner.id, UserState.Invite);
+    this.invites.delete(from.id);
+    this.invites.delete(toId);
 
-    this.userState.add(me.id, UserState.Chat);
-    this.userState.add(partner.id, UserState.Chat);
+    this.chats.set(from.id, toId);
+    this.chats.set(toId, from.id);
 
-    this.invites.delete(socketId);
+    this.userState.delete(from.id, UserState.Invite);
+    this.userState.delete(toId, UserState.Invite);
+    this.userState.add(from.id, UserState.Chat);
+    this.userState.add(toId, UserState.Chat);
+
+    from.socket.emit(chatSockets.invite.accept, from.id);
+    to.socket.emit(chatSockets.invite.accept, from.id);
   }
 
   public reject(socketId: string): void {
-    const user = this.userService.get({ socketId });
+    const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(user.id, UserState.Invite)) {
+    if (!this.userState.has(from.id, UserState.Invite)) {
       return;
     }
 
-    const fromUserId = this.invites.get(user.id);
+    const toId: string | undefined = this.invites.get(from.id);
 
-    if (fromUserId) {
-      this.invites.delete(user.id);
-      this.invites.delete(fromUserId);
-      this.userState.delete(user.id, UserState.Invite);
-      this.userState.delete(fromUserId, UserState.Invite);
+    if (!toId) {
+      throw new ForbiddenException();
     }
+
+    this.invites.delete(from.id);
+    this.invites.delete(toId);
+    this.userState.delete(from.id, UserState.Invite);
+    this.userState.delete(toId, UserState.Invite);
   }
 
   public leave(socketId: string): void {
-    const user = this.userService.get({ socketId });
+    const from: User = this.userService.get({ socketId });
 
-    if (!this.userState.has(user.id, UserState.Chat)) {
+    if (!this.userState.has(from.id, UserState.Chat)) {
       throw new ForbiddenException('You are not in a chat');
     }
 
-    const partnerId: string | undefined = this.chats.get(user.id);
+    const toId: string | undefined = this.chats.get(from.id);
 
-    if (!partnerId) {
+    if (!toId) {
       throw new NotFoundException('Chat partner not found');
     }
 
-    const me: User = this.userService.get({ id: user.id });
-    const partner: User = this.userService.get({ id: partnerId });
+    const to: User = this.userService.get({ id: toId });
 
-    me.socket.emit(chatSockets.end);
-    partner.socket.emit(chatSockets.end);
+    this.chats.delete(from.id);
+    this.chats.delete(toId);
+    this.userState.delete(from.id, UserState.Chat);
+    this.userState.delete(toId, UserState.Chat);
 
-    this.chats.delete(user.id);
-    this.chats.delete(partnerId);
-
-    this.userState.delete(user.id, UserState.Chat);
-    this.userState.delete(partnerId, UserState.Chat);
+    from.socket.emit(chatSockets.end, {});
+    to.socket.emit(chatSockets.end, {});
   }
 
   public sendMessage(socketId: string, message: string): void {
-    const user = this.userService.get({ socketId });
-    const partner: User = this.userService.get({ id: user.id });
-    partner.socket.emit(chatSockets.message.send, message);
+    const from: User = this.userService.get({ socketId });
+
+    if (!this.userState.has(from.id, UserState.Chat)) {
+      throw new ForbiddenException('You are not in a chat');
+    }
+
+    const toId: string | undefined = this.chats.get(from.id);
+
+    if (!toId) {
+      throw new NotFoundException('Chat partner not found');
+    }
+
+    const to: User = this.userService.get({ id: toId });
+    to.socket.emit(chatSockets.message.send, { message });
   }
 }
