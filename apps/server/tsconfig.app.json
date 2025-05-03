@@ -2,12 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": true
   },
-  "include": [
-    "src/**/*.ts",
-    "../../libs/shared/src"
-  ],
+  "include": ["src/**/*.ts", "../../libs/shared/src"],
   "exclude": [
     "out-tsc",
     "dist",
@@ -17,5 +14,10 @@
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
+  ],
+  "references": [
+    {
+      "path": "../../libs/shared/tsconfig.lib.json"
+    }
   ]
 }

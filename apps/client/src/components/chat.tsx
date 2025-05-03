@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/socket';
+import { chatSockets } from '@shared';
 
 interface Props {
   partnerId: string;
@@ -12,7 +13,7 @@ const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
 
   const sendMessage = (): void => {
     if (!input.trim()) return;
-    socket.emit('message', input);
+    socket.emit(chatSockets.message.send, input);
     setMessages((prev) => [...prev, `Вы: ${input}`]);
     setInput('');
   };

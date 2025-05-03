@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { UserStateService } from './user-state.service';
-import { UserService } from '../user.service';
+import { UserModule } from '../user.module';
 
 @Module({
-  imports: [UserService],
+  imports: [UserModule],
   providers: [UserStateService],
+  exports: [UserStateService],
 })
 export class UserStateModule {}

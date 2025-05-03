@@ -7,6 +7,7 @@ import Notification from '../../components/notification';
 import Language from '../../components/language';
 import Theme from '../../components/theme';
 import Particles from '../../components/particles';
+import { chatSockets, userSockets } from '@shared';
 
 const App = () => {
   const { t } = useTranslation();
@@ -16,49 +17,49 @@ const App = () => {
   const [inChatWith, setInChatWith] = useState<string | null>(null);
 
   useEffect(() => {
-    socket.on('yourId', (id: string) => {
+    socket.on(userSockets.id.set, (id: string) => {
       setMyId(id);
     });
 
-    socket.on('incomingInvite', (fromId: string, duration: number) => {
+    socket.on(chatSockets.invite.new, (fromId: string, duration: number) => {
       setInviteFrom(fromId);
       setTimeout(() => {
         if (!inChatWith) {
-          socket.emit('reject');
+          socket.emit(chatSockets.invite.reject);
           setInviteFrom(null);
         }
       }, duration);
     });
 
-    socket.on('inviteAccepted', (partnerId: string) => {
+    socket.on(chatSockets.invite.accept, (partnerId: string) => {
       setInChatWith(partnerId);
       setInviteFrom(null);
     });
 
-    socket.on('chatEnded', () => {
+    socket.on(chatSockets.end, () => {
       setInChatWith(null);
       setInviteFrom(null);
     });
 
     return () => {
-      socket.off('yourId');
-      socket.off('incomingInvite');
-      socket.off('inviteAccepted');
-      socket.off('chatEnded');
+      socket.off(userSockets.id.set);
+      socket.off(chatSockets.invite.new);
+      socket.off(chatSockets.invite.accept);
+      socket.off(chatSockets.end);
     };
   }, [inChatWith]);
 
   const handleAccept = () => {
-    socket.emit('accept');
+    socket.emit(chatSockets.invite.accept);
   };
 
   const handleReject = () => {
-    socket.emit('reject');
+    socket.emit(chatSockets.invite.reject);
     setInviteFrom(null);
   };
 
   const handleLeave = () => {
-    socket.emit('leave');
+    socket.emit(chatSockets.end);
   };
 
   return (

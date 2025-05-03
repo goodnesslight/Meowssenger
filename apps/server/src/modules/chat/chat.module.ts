@@ -6,5 +6,6 @@ import { UserStateModule } from '../user/user-state/user-state.module';
 @Module({
   imports: [UserModule, UserStateModule],
   providers: [ChatService],
+  exports: [ChatService],
 })
 export class ChatModule {}

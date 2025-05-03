@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { socket } from '../socket/socket';
+import { chatSockets } from '@shared';
 
 const Invite: React.FC = () => {
   const [inputId, setInputId] = useState('');
@@ -7,14 +8,10 @@ const Invite: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
-    socket.emit('invite', inputId);
+    socket.emit(chatSockets.invite.new, inputId);
   };
 
-  socket.on('inviteFailed', (toId: string): void => {
-    setMessage(`Не удалось отправить приглашение пользователю ${toId}`);
-  });
-
-  socket.on('incomingInvite', (): void => {
+  socket.on(chatSockets.invite.new, (): void => {
     setMessage('');
   });
 
