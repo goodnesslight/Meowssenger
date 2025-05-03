@@ -22,5 +22,10 @@
       "development"
     ],
     "baseUrl": ".",
+    "paths": {
+      "@shared/chat": [
+        "libs/shared/chat/src/"
+      ]
+    }
   }
 }
