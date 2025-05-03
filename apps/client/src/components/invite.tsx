@@ -8,10 +8,11 @@ const Invite: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
-    socket.emit(chatSockets.invite.new, inputId);
+    socket.emit(chatSockets.invite.new, { toUserId: inputId });
   };
 
   socket.on(chatSockets.invite.new, (): void => {
+    console.log('new');
     setMessage('');
   });
 

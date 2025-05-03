@@ -5,9 +5,5 @@ export const chatSockets = {
     reject: 'chat.invite.reject',
   },
 
-  message: {
-    send: 'chat.message.send',
-  },
-
   end: 'chat.end',
 };

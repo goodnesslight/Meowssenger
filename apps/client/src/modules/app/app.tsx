@@ -7,28 +7,33 @@ import Notification from '../../components/notification';
 import Language from '../../components/language';
 import Theme from '../../components/theme';
 import Particles from '../../components/particles';
-import { chatSockets, userSockets } from '@shared';
+import {
+  ChatInviteNewDto,
+  chatSockets,
+  UserIdSetDto,
+  userSockets,
+} from '@shared';
 
 const App = () => {
   const { t } = useTranslation();
 
-  const [myId, setMyId] = useState('');
+  const [myId, setId] = useState('');
   const [inviteFrom, setInviteFrom] = useState<string | null>(null);
   const [inChatWith, setInChatWith] = useState<string | null>(null);
 
   useEffect(() => {
-    socket.on(userSockets.id.set, (id: string) => {
-      setMyId(id);
+    socket.on(userSockets.id.set, (dto: UserIdSetDto) => {
+      setId(dto.id);
     });
 
-    socket.on(chatSockets.invite.new, (fromId: string, duration: number) => {
-      setInviteFrom(fromId);
+    socket.on(chatSockets.invite.new, (dto: ChatInviteNewDto) => {
+      setInviteFrom(dto.toUserId);
       setTimeout(() => {
         if (!inChatWith) {
           socket.emit(chatSockets.invite.reject);
           setInviteFrom(null);
         }
-      }, duration);
+      }, 15000);
     });
 
     socket.on(chatSockets.invite.accept, (partnerId: string) => {

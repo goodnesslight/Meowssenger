@@ -11,10 +11,12 @@ import { UserService } from '../user/user.service';
 import {
   type ChatInviteNewDto,
   type ChatMessageSendDto,
+  chatMessageSockets,
   chatSockets,
   userSockets,
 } from '@shared';
 import { ChatService } from '../chat/chat.service';
+import { ChatMessageService } from '../chat/chat-message/chat-message.service';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -24,7 +26,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly userService: UserService,
-    private readonly chatService: ChatService
+    private readonly chatService: ChatService,
+    private readonly chatMessageService: ChatMessageService
   ) {}
 
   // ==================== NATIVE ====================
@@ -72,11 +75,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatService.leave(socket.id);
   }
 
-  @SubscribeMessage(chatSockets.message.send)
+  // ==================== CHAT-MESSAGE ====================
+
+  @SubscribeMessage(chatMessageSockets.send)
   handleMessage(
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatMessageSendDto
   ): void {
-    this.chatService.sendMessage(socket.id, dto.message);
+    this.chatMessageService.send(socket.id, dto.message);
   }
 }
