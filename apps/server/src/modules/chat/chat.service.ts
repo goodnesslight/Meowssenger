@@ -72,7 +72,7 @@ export class ChatService {
     this.userStateService.add(from.id, UserState.Chat);
     this.userStateService.add(toId, UserState.Chat);
 
-    from.socket.emit(chatSockets.invite.accept, { userId: from.id });
+    from.socket.emit(chatSockets.invite.accept, { userId: to.id });
     to.socket.emit(chatSockets.invite.accept, { userId: from.id });
   }
 

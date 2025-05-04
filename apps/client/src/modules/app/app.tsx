@@ -8,6 +8,7 @@ import Language from '../../components/language';
 import Theme from '../../components/theme';
 import Particles from '../../components/particles';
 import {
+  ChatInviteAcceptDto,
   ChatInviteNewDto,
   ChatKeySetDto,
   chatKeySockets,
@@ -48,7 +49,7 @@ const App = () => {
       }, 15000);
     });
 
-    socket.on(chatSockets.invite.accept, (dto: { userId: string }) => {
+    socket.on(chatSockets.invite.accept, (dto: ChatInviteAcceptDto) => {
       setInChatWith(dto.userId);
       setInviteFrom(null);
       (async () => {
@@ -69,6 +70,7 @@ const App = () => {
         return;
       }
 
+      console.log(dto);
       const theirPub: CryptoKey = await importPublicKey(dto.key);
       const sk: CryptoKey = await deriveSharedKey(
         myKeyPair.privateKey,
