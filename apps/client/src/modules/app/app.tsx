@@ -30,6 +30,7 @@ const App = () => {
   const [inChatWith, setInChatWith] = useState<string | null>(null);
 
   const [myKeyPair, setMyKeyPair] = useState<CryptoKeyPair | null>(null);
+  const [theirJWK, setTheirJWK] = useState<JsonWebKey | null>(null);
   const [sharedKey, setSharedKey] = useState<CryptoKey | null>(null);
 
   useEffect(() => {
@@ -49,34 +50,26 @@ const App = () => {
       }, 15000);
     });
 
-    socket.on(chatSockets.invite.accept, (dto: ChatInviteAcceptDto) => {
+    socket.on(chatSockets.invite.accept, async (dto: ChatInviteAcceptDto) => {
       setInChatWith(dto.userId);
       setInviteFrom(null);
-      (async () => {
-        const kp: CryptoKeyPair = await generateECDHKeyPair();
-        setMyKeyPair(kp);
-        const jwk: JsonWebKey = await exportPublicKey(kp.publicKey);
-        socket.emit(chatKeySockets.set, { key: jwk });
-      })();
+
+      const kp = await generateECDHKeyPair();
+      setMyKeyPair(kp);
+      const pub = await exportPublicKey(kp.publicKey);
+      socket.emit(chatKeySockets.set, { key: pub });
     });
 
     socket.on(chatSockets.end, () => {
       setInChatWith(null);
       setInviteFrom(null);
+      setMyKeyPair(null);
+      setTheirJWK(null);
+      setSharedKey(null);
     });
 
-    socket.on(chatKeySockets.set, async (dto: ChatKeySetDto) => {
-      if (!myKeyPair) {
-        return;
-      }
-
-      console.log(dto);
-      const theirPub: CryptoKey = await importPublicKey(dto.key);
-      const sk: CryptoKey = await deriveSharedKey(
-        myKeyPair.privateKey,
-        theirPub
-      );
-      setSharedKey(sk);
+    socket.on(chatKeySockets.set, (dto: ChatKeySetDto) => {
+      setTheirJWK(dto.key);
     });
 
     return () => {
@@ -84,9 +77,20 @@ const App = () => {
       socket.off(chatSockets.invite.new);
       socket.off(chatSockets.invite.accept);
       socket.off(chatSockets.end);
+      socket.off(chatKeySockets.set);
       clearTimeout(timer);
     };
   }, [inChatWith]);
+
+  useEffect(() => {
+    (async () => {
+      if (myKeyPair && theirJWK && !sharedKey) {
+        const theirKey = await importPublicKey(theirJWK);
+        const sk = await deriveSharedKey(myKeyPair.privateKey, theirKey);
+        setSharedKey(sk);
+      }
+    })();
+  }, [myKeyPair, theirJWK]);
 
   const handleAccept = () => {
     socket.emit(chatSockets.invite.accept);
