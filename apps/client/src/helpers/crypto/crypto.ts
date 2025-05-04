@@ -1,9 +1,13 @@
+import { ChatMessageSendDto } from '@shared';
+
+const curve = 'P-256';
+const aesAlg = { name: 'AES-GCM', length: 256 } as const;
+const ivLength = 12;
+
 export async function generateECDHKeyPair(): Promise<CryptoKeyPair> {
-  return crypto.subtle.generateKey(
-    { name: 'ECDH', namedCurve: 'P-256' },
-    true,
-    ['deriveKey']
-  );
+  return crypto.subtle.generateKey({ name: 'ECDH', namedCurve: curve }, true, [
+    'deriveKey',
+  ]);
 }
 
 export async function exportPublicKey(key: CryptoKey): Promise<JsonWebKey> {
@@ -14,7 +18,7 @@ export async function importPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'jwk',
     jwk,
-    { name: 'ECDH', namedCurve: 'P-256' },
+    { name: 'ECDH', namedCurve: curve },
     true,
     []
   );
@@ -27,45 +31,63 @@ export async function deriveSharedKey(
   return crypto.subtle.deriveKey(
     { name: 'ECDH', public: publicKey },
     privateKey,
-    { name: 'AES-GCM', length: 256 },
+    aesAlg,
     false,
     ['encrypt', 'decrypt']
   );
 }
 
+function toBase64(buffer: ArrayBuffer): string {
+  const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(buffer);
+  let str = '';
+
+  for (const byte of bytes) {
+    str += String.fromCharCode(byte);
+  }
+
+  return btoa(str);
+}
+
+function fromBase64(b64: string): ArrayBuffer {
+  const str: string = atob(b64);
+  const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(str.length);
+
+  for (let i = 0; i < str.length; i++) {
+    bytes[i] = str.charCodeAt(i);
+  }
+
+  return bytes.buffer;
+}
+
 export async function encryptMessage(
   key: CryptoKey,
   plaintext: string
-): Promise<{ iv: string; ciphertext: string }> {
+): Promise<ChatMessageSendDto> {
   const iv: Uint8Array<ArrayBuffer> = crypto.getRandomValues(
-    new Uint8Array(12)
+    new Uint8Array(ivLength)
   );
-  const pt: Uint8Array<ArrayBufferLike> = new TextEncoder().encode(plaintext);
-  const ct: ArrayBuffer = await crypto.subtle.encrypt(
+  const data: Uint8Array<ArrayBufferLike> = new TextEncoder().encode(plaintext);
+  const encrypted: ArrayBuffer = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
-    pt
+    data
   );
   return {
-    iv: Array.from(iv)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(''),
-    ciphertext: Array.from(new Uint8Array(ct))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(''),
+    iv: toBase64(iv.buffer),
+    ciphertext: toBase64(encrypted),
   };
 }
 
 export async function decryptMessage(
   key: CryptoKey,
-  data: { iv: string; ciphertext: string }
+  dto: ChatMessageSendDto
 ): Promise<string> {
-  const iv = new Uint8Array(
-    data.iv.match(/.{2}/g)!.map((h) => parseInt(h, 16))
+  const iv: Uint8Array<ArrayBuffer> = new Uint8Array(fromBase64(dto.iv));
+  const encrypted: ArrayBuffer = fromBase64(dto.ciphertext);
+  const decrypted: ArrayBuffer = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encrypted
   );
-  const ct = new Uint8Array(
-    data.ciphertext.match(/.{2}/g)!.map((h) => parseInt(h, 16))
-  );
-  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
-  return new TextDecoder().decode(pt);
+  return new TextDecoder().decode(decrypted);
 }
