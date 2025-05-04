@@ -1,13 +1,31 @@
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
 
 interface Props {
   inviterId: string;
   onAccept: () => void;
   onReject: () => void;
+  autoRejectSeconds?: number;
 }
 
-const Notification: React.FC<Props> = ({ inviterId, onAccept, onReject }) => {
+const Notification: React.FC<Props> = ({
+  inviterId,
+  onAccept,
+  onReject,
+  autoRejectSeconds = 15,
+}) => {
   const { t } = useTranslation();
+
+  const [remaining, setRemaining] = useState(autoRejectSeconds);
+
+  useEffect(() => {
+    if (remaining <= 0) {
+      onReject();
+      return;
+    }
+    const timer = setTimeout(() => setRemaining((sec) => sec - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [remaining, onReject]);
 
   return (
     <div className="bg-white dark:bg-gray-800 text-black dark:text-white shadow-md rounded p-4 text-center transition-colors">
@@ -27,7 +45,7 @@ const Notification: React.FC<Props> = ({ inviterId, onAccept, onReject }) => {
         </button>
       </div>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        {t('invite.auto-reject', { duration: 15 })}{' '}
+        {t('invite.auto-reject', { duration: remaining })}
       </p>
     </div>
   );
