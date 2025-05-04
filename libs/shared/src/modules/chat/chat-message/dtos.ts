@@ -1,3 +1,4 @@
 export interface ChatMessageSendDto {
-  message: string;
+  ciphertext: string;
+  iv: string;
 }

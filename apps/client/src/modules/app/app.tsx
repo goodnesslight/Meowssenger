@@ -7,7 +7,19 @@ import Notification from '../../components/notification';
 import Language from '../../components/language';
 import Theme from '../../components/theme';
 import Particles from '../../components/particles';
-import { ChatInviteNewDto, chatSockets, userSockets } from '@shared';
+import {
+  ChatInviteNewDto,
+  ChatKeySetDto,
+  chatKeySockets,
+  chatSockets,
+  userSockets,
+} from '@shared';
+import {
+  generateECDHKeyPair,
+  exportPublicKey,
+  importPublicKey,
+  deriveSharedKey,
+} from '../../utils/crypto';
 
 const App = () => {
   const { t } = useTranslation();
@@ -16,18 +28,18 @@ const App = () => {
   const [inviteFrom, setInviteFrom] = useState<string | null>(null);
   const [inChatWith, setInChatWith] = useState<string | null>(null);
 
+  const [myKeyPair, setMyKeyPair] = useState<CryptoKeyPair | null>(null);
+  const [sharedKey, setSharedKey] = useState<CryptoKey | null>(null);
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
-    // Получаем свой ID
     socket.on(userSockets.id.set, (dto: { id: string }) => {
       setMyId(dto.id);
     });
 
-    // Новое приглашение: { userId: string }
     socket.on(chatSockets.invite.new, (dto: ChatInviteNewDto) => {
       setInviteFrom(dto.userId);
-      // авто-отклонение через 15 сек
       timer = setTimeout(() => {
         if (!inChatWith) {
           socket.emit(chatSockets.invite.reject);
@@ -36,16 +48,35 @@ const App = () => {
       }, 15000);
     });
 
-    // Принимаем приглашение: { userId: string }
     socket.on(chatSockets.invite.accept, (dto: { userId: string }) => {
       setInChatWith(dto.userId);
       setInviteFrom(null);
+      (async () => {
+        const kp: CryptoKeyPair = await generateECDHKeyPair();
+        setMyKeyPair(kp);
+        const jwk: JsonWebKey = await exportPublicKey(kp.publicKey);
+        socket.emit(chatKeySockets.set, { key: jwk });
+      })();
     });
 
-    // Конец чата
     socket.on(chatSockets.end, () => {
       setInChatWith(null);
       setInviteFrom(null);
+    });
+
+    socket.on(chatKeySockets.set, async (dto: ChatKeySetDto) => {
+      if (!myKeyPair) {
+        return;
+      }
+
+      console.log(dto);
+
+      const theirPub: CryptoKey = await importPublicKey(dto.key);
+      const sk: CryptoKey = await deriveSharedKey(
+        myKeyPair.privateKey,
+        theirPub
+      );
+      setSharedKey(sk);
     });
 
     return () => {
@@ -60,10 +91,12 @@ const App = () => {
   const handleAccept = () => {
     socket.emit(chatSockets.invite.accept);
   };
+
   const handleReject = () => {
     socket.emit(chatSockets.invite.reject);
     setInviteFrom(null);
   };
+
   const handleLeave = () => {
     socket.emit(chatSockets.end);
   };
@@ -87,7 +120,13 @@ const App = () => {
 
       {!inviteFrom && !inChatWith && <Invite />}
 
-      {inChatWith && <Chat partnerId={inChatWith} onLeave={handleLeave} />}
+      {inChatWith && sharedKey && (
+        <Chat
+          partnerId={inChatWith}
+          sharedKey={sharedKey}
+          onLeave={handleLeave}
+        />
+      )}
     </div>
   );
 };

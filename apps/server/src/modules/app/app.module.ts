@@ -5,6 +5,7 @@ import { ChatModule } from '../chat/chat.module';
 import { AppGateway } from './app.gateway';
 import { UserStateModule } from '../user/user-state/user-state.module';
 import { ChatMessageModule } from '../chat/chat-message/chat-message.module';
+import { ChatKeyModule } from '../chat/chat-key/chat-key.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ChatMessageModule } from '../chat/chat-message/chat-message.module';
     UserStateModule,
     ChatModule,
     ChatMessageModule,
+    ChatKeyModule,
   ],
   providers: [AppGateway],
 })

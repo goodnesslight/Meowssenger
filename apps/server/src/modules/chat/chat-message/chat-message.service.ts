@@ -14,7 +14,7 @@ export class ChatMessageService {
     private readonly chatService: ChatService
   ) {}
 
-  public send(socketId: string, dto: ChatMessageSendDto): void {
+  send(socketId: string, dto: ChatMessageSendDto): void {
     const from: User = this.userService.get({ socketId });
 
     if (!this.userState.has(from.id, UserState.Chat)) {

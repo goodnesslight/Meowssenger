@@ -1,26 +1,36 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/socket';
-import { chatMessageSockets } from '@shared';
+import { ChatMessageSendDto, chatMessageSockets } from '@shared';
+import { decryptMessage, encryptMessage } from '../utils/crypto';
 
 interface Props {
   partnerId: string;
+  sharedKey: CryptoKey;
   onLeave: () => void;
 }
 
-const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
+const Chat: React.FC<Props> = ({ partnerId, sharedKey, onLeave }) => {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState<string>('');
 
-  const sendMessage = (): void => {
+  const sendMessage = async (): Promise<void> => {
     if (!input.trim()) return;
-    socket.emit(chatMessageSockets.send, { message: input });
+    const { iv, ciphertext } = await encryptMessage(sharedKey, input);
+    socket.emit(chatMessageSockets.send, {
+      iv,
+      ciphertext,
+    });
     setMessages((prev) => [...prev, `Вы: ${input}`]);
     setInput('');
   };
 
   useEffect(() => {
-    const handleIncoming = (dto: { message: string }) => {
-      setMessages((prev) => [...prev, `${partnerId}: ${dto.message}`]);
+    const handleIncoming = async (dto: ChatMessageSendDto) => {
+      const text = await decryptMessage(sharedKey, {
+        iv: dto.iv,
+        ciphertext: dto.ciphertext,
+      });
+      setMessages((prev) => [...prev, `${partnerId}: ${text}`]);
     };
 
     socket.on(chatMessageSockets.send, handleIncoming);
@@ -48,7 +58,8 @@ const Chat: React.FC<Props> = ({ partnerId, onLeave }) => {
         />
         <button
           onClick={sendMessage}
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+          disabled={!sharedKey}
+          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Отправить
         </button>

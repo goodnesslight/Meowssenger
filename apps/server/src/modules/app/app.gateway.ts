@@ -10,6 +10,8 @@ import { Socket } from 'socket.io';
 import { UserService } from '../user/user.service';
 import {
   type ChatInviteNewDto,
+  type ChatKeySetDto,
+  chatKeySockets,
   type ChatMessageSendDto,
   chatMessageSockets,
   chatSockets,
@@ -17,6 +19,7 @@ import {
 } from '@shared';
 import { ChatService } from '../chat/chat.service';
 import { ChatMessageService } from '../chat/chat-message/chat-message.service';
+import { ChatKeyService } from '../chat/chat-key/chat-key.service';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -27,7 +30,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly userService: UserService,
     private readonly chatService: ChatService,
-    private readonly chatMessageService: ChatMessageService
+    private readonly chatMessageService: ChatMessageService,
+    private readonly chatKeyService: ChatKeyService
   ) {}
 
   // ==================== NATIVE ====================
@@ -50,7 +54,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ==================== CHAT ====================
 
   @SubscribeMessage(chatSockets.invite.new)
-  handleInviteNew(
+  handleChatInviteNew(
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatInviteNewDto
   ): void {
@@ -58,27 +62,37 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(chatSockets.invite.accept)
-  handleInviteAccept(@ConnectedSocket() socket: Socket): void {
+  handleChatInviteAccept(@ConnectedSocket() socket: Socket): void {
     this.chatService.accept(socket.id);
   }
 
   @SubscribeMessage(chatSockets.invite.reject)
-  handleInviteReject(@ConnectedSocket() socket: Socket): void {
+  handleChatInviteReject(@ConnectedSocket() socket: Socket): void {
     this.chatService.reject(socket.id);
   }
 
   @SubscribeMessage(chatSockets.end)
-  handleLeave(@ConnectedSocket() socket: Socket): void {
+  handleChatEnd(@ConnectedSocket() socket: Socket): void {
     this.chatService.leave(socket.id);
   }
 
   // ==================== CHAT-MESSAGE ====================
 
   @SubscribeMessage(chatMessageSockets.send)
-  handleMessage(
+  handleChatMessageSend(
     @ConnectedSocket() socket: Socket,
     @MessageBody() dto: ChatMessageSendDto
   ): void {
     this.chatMessageService.send(socket.id, dto);
+  }
+
+  // ==================== CHAT-KEY ====================
+
+  @SubscribeMessage(chatKeySockets.set)
+  handleChatKeySet(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() dto: ChatKeySetDto
+  ): void {
+    this.chatKeyService.set(socket.id, dto);
   }
 }
