@@ -1,21 +1,37 @@
-import { useEffect, useRef } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
+
+interface Vector2 {
+  x: number;
+  y: number;
+}
 
 const Particles = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouse = useRef({ x: -1000, y: -1000 });
-  const particles = useRef<any[]>([]);
+  const canvasRef: RefObject<HTMLCanvasElement | null> =
+    useRef<HTMLCanvasElement>(null);
+  const mouse: RefObject<Vector2> = useRef({ x: -1000, y: -1000 });
+  const particles: RefObject<any[]> = useRef<any[]>([]);
+
+  const particlesAmount = 80;
+  const maxDistance = 120;
 
   useEffect(() => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    const canvas: HTMLCanvasElement | null = canvasRef.current;
 
-    const PARTICLE_COUNT = 80;
-    const MAX_DISTANCE = 120;
+    if (!canvas) {
+      return;
+    }
 
-    const generateParticles = () => {
-      particles.current = Array.from({ length: PARTICLE_COUNT }, () => ({
+    const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+
+    if (!ctx) {
+      return;
+    }
+
+    let width: number = (canvas.width = window.innerWidth);
+    let height: number = (canvas.height = window.innerHeight);
+
+    const generateParticles = (): void => {
+      particles.current = Array.from({ length: particlesAmount }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 1,
@@ -25,50 +41,59 @@ const Particles = () => {
 
     generateParticles();
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent): void => {
       mouse.current.x = e.clientX;
       mouse.current.y = e.clientY;
     };
 
-    const handleResize = () => {
+    const handleResize = (): void => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
-      generateParticles(); // пересоздание при ресайзе
+      generateParticles();
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('resize', handleResize);
 
-    const draw = () => {
+    const draw = (): void => {
       ctx.clearRect(0, 0, width, height);
-      const isDark = document.documentElement.classList.contains('dark');
-      const dotColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.6)';
-      const lineColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+      const isDark: boolean =
+        document.documentElement.classList.contains('dark');
+      const dotColor: string = isDark
+        ? 'rgba(255,255,255,0.3)'
+        : 'rgba(0,0,0,0.6)';
+      const lineColor: string = isDark
+        ? 'rgba(255,255,255,0.2)'
+        : 'rgba(0,0,0,0.2)';
 
-      // движение и отрисовка точек
-      for (const p of particles.current) {
-        p.x += p.vx;
-        p.y += p.vy;
+      for (const particle of particles.current) {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
 
-        if (p.x <= 0 || p.x >= width) p.vx *= -1;
-        if (p.y <= 0 || p.y >= height) p.vy *= -1;
+        if (particle.x <= 0 || particle.x >= width) {
+          particle.vx *= -1;
+        }
+
+        if (particle.y <= 0 || particle.y >= height) {
+          particle.vy *= -1;
+        }
 
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
         ctx.fillStyle = dotColor;
         ctx.fill();
       }
 
-      // соединение линиями
       for (let i = 0; i < particles.current.length; i++) {
         for (let j = i + 1; j < particles.current.length; j++) {
-          const p1 = particles.current[i];
-          const p2 = particles.current[j];
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
+          const p1: Vector2 = particles.current[i];
+          const p2: Vector2 = particles.current[j];
+          const dx: number = p1.x - p2.x;
+          const dy: number = p1.y - p2.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < MAX_DISTANCE) {
-            const alpha = 1 - dist / MAX_DISTANCE;
+
+          if (dist < maxDistance) {
+            const alpha: number = 1 - dist / maxDistance;
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
@@ -77,13 +102,13 @@ const Particles = () => {
           }
         }
 
-        // линия к мышке
-        const p = particles.current[i];
-        const dx = p.x - mouse.current.x;
-        const dy = p.y - mouse.current.y;
-        const distToMouse = Math.sqrt(dx * dx + dy * dy);
-        if (distToMouse < MAX_DISTANCE) {
-          const alpha = 1 - distToMouse / MAX_DISTANCE;
+        const p: Vector2 = particles.current[i];
+        const dx: number = p.x - mouse.current.x;
+        const dy: number = p.y - mouse.current.y;
+        const distToMouse: number = Math.sqrt(dx * dx + dy * dy);
+
+        if (distToMouse < maxDistance) {
+          const alpha: number = 1 - distToMouse / maxDistance;
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(mouse.current.x, mouse.current.y);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { socket } from '../../socket/socket';
+import { socket } from '../../helpers/socket/socket';
 import { useTranslation } from 'react-i18next';
 import Chat from '../../components/chat';
 import Invite from '../../components/invite';
@@ -20,7 +20,7 @@ import {
   exportPublicKey,
   importPublicKey,
   deriveSharedKey,
-} from '../../utils/crypto';
+} from '../../helpers/crypto/crypto';
 
 const App = () => {
   const { t } = useTranslation();

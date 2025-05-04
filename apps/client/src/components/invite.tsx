@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { socket } from '../socket/socket';
+import { socket } from '../helpers/socket/socket';
 import { chatSockets } from '@shared';
 import { useTranslation } from 'react-i18next';
 

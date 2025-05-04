@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { socket } from '../socket/socket';
+import { socket } from '../helpers/socket/socket';
 import { ChatMessageSendDto, chatMessageSockets } from '@shared';
-import { decryptMessage, encryptMessage } from '../utils/crypto';
+import { decryptMessage, encryptMessage } from '../helpers/crypto/crypto';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
