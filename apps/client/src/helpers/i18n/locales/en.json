@@ -6,7 +6,11 @@
         "id": "Interlocutor ID"
     },
     "invite": {
-        "send": "Send an invitation"
+        "new": "User {{id}} wants to start a chat with you",
+        "send": "Send invitation",
+        "accept": "Accept",
+        "reject": "Reject",
+        "auto-reject": "Auto-cancel after {{duration}} seconds.."
     },
     "chat": {
         "message": {
