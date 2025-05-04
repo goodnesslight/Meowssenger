@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { socket } from '../socket/socket';
 import { chatSockets } from '@shared';
+import { useTranslation } from 'react-i18next';
 
 const Invite: React.FC = () => {
+  const { t } = useTranslation();
+
   const [inputId, setInputId] = useState('');
   const [message, setMessage] = useState('');
 
@@ -12,7 +15,6 @@ const Invite: React.FC = () => {
   };
 
   socket.on(chatSockets.invite.new, (): void => {
-    console.log('new');
     setMessage('');
   });
 
@@ -20,7 +22,7 @@ const Invite: React.FC = () => {
     <form onSubmit={handleSubmit} className="flex flex-col items-center gap-2">
       <input
         className="border px-4 py-2 rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600"
-        placeholder="ID собеседника"
+        placeholder={t('partner.id')}
         value={inputId}
         onChange={(e) => setInputId(e.target.value)}
       />
@@ -28,7 +30,7 @@ const Invite: React.FC = () => {
         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         type="submit"
       >
-        Отправить приглашение
+        {t('invite.send')}
       </button>
       {message && (
         <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>

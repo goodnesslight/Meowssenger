@@ -1,5 +1,18 @@
 {
     "self": {
         "id": "Your ID: {{id}}"
+    },
+    "partner": {
+        "id": "Interlocutor ID"
+    },
+    "invite": {
+        "send": "Send an invitation"
+    },
+    "chat": {
+        "message": {
+            "title": "Message..",
+            "send": "Send"
+        },
+        "end": "End chat"
     }
 }

@@ -69,8 +69,6 @@ const App = () => {
         return;
       }
 
-      console.log(dto);
-
       const theirPub: CryptoKey = await importPublicKey(dto.key);
       const sk: CryptoKey = await deriveSharedKey(
         myKeyPair.privateKey,
